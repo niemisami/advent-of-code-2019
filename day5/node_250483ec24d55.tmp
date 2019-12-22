@@ -1,0 +1,37 @@
+const readline = require('readline')
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+})
+
+const readLock = false
+
+const readInput = () =>
+  new Promise(resolve => {
+    readLock = true
+    rl.question('Give system ID:', systemId => {
+      console.log(`Received: ${systemId}`)
+      resolve(systemId)
+    })
+    .catch(error => console.error(error))
+  })
+
+let i = 0
+let res
+while(i < 10) {
+  if(!readLock) {
+    res = readInput()
+    if(res.then) {
+      res.then(systemId => {
+        console.log('RESULT IN LOOP', systemId, i)
+        readLock = false
+      })
+      i++
+    } else {
+      i++
+    }
+  }
+
+  console.log('i', i)
+}
