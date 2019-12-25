@@ -27,7 +27,15 @@ const opcodes = {
   MULTIPLY: 2,
   WRITE: 3,
   READ: 4,
+  JUMP_IF_TRUE: 5,
+  JUMP_IF_FALSE: 6,
+  LESS_THAN: 7,
+  EQUALS: 8,
   HALT: 99
+}
+
+function getDefaultPointer(programCounter) {
+  return programCounter + this.pointer + 1
 }
 
 const operations = {
@@ -59,6 +67,38 @@ const operations = {
     },
     getAddress: parameters => parameters[2],
     params: 1
+  },
+  [opcodes.JUMP_IF_TRUE]: {
+    instruction: (memory, parameters, paramModes) => {
+      const [value, pointer] = getParameterValues(memory, parameters, paramModes)
+      return value !== 0 ? pointer : 0
+    },
+    params: 2,
+    isCondition: true
+  },
+  [opcodes.JUMP_IF_FALSE]: {
+    instruction: (memory, parameters, paramModes) => {
+      const [value, pointer] = getParameterValues(memory, parameters, paramModes)
+      return value === 0 ? pointer : 0
+    },
+    params: 2,
+    isCondition: true
+  },
+  [opcodes.LESS_THAN]: {
+    instruction: (memory, parameters, paramModes) => {
+      const [value, comparator] = getParameterValues(memory, parameters, paramModes)
+      return value < comparator ? 1 : 0
+    },
+    getAddress: parameters => parameters[2],
+    params: 3
+  },
+  [opcodes.EQUALS]: {
+    instruction: (memory, parameters, paramModes) => {
+      const [value, comparator] = getParameterValues(memory, parameters, paramModes)
+      return value === comparator ? 1 : 0
+    },
+    getAddress: parameters => parameters[2],
+    params: 3
   },
   [opcodes.HALT]: {
     instruction: () => null,
@@ -105,6 +145,10 @@ const execute = instructions =>
         let instruction = instructions[programCounter]
         let { operation, paramModes } = interprateOperation(instruction)
 
+        if(!operation) {
+          console.error('ERROR PARSING OPCODE', instruction)
+          break
+        }
         if(operation.halt) {
           break;
         }
@@ -114,12 +158,16 @@ const execute = instructions =>
           ? Number(systemId)
           : operation.instruction(instructions, parameters, paramModes)
 
-        const resultAddress = operation.getAddress(parameters, paramModes)
-        // console.log('A', instructions[225], instructions[224], resultAddress)
-        updateMemory(instructions, resultAddress, value)
-
+        if(operation.isCondition) {
+          if(value) {
+            programCounter = value
+            continue
+          }
+        } else {
+          const resultAddress = operation.getAddress(parameters, paramModes)
+          updateMemory(instructions, resultAddress, value)
+        }
         programCounter += operation.params + 1
-
       }
       while(true)
       const output = instructions[0]
